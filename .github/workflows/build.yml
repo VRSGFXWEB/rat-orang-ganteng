@@ -1,4 +1,4 @@
-name: Build APK Fix Total
+name: Build APK Paling Fix
 
 on:
   push:
@@ -9,10 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    defaults:
-      run:
-        working-directory: noir-parental/child-app-android
-
+    # PENTING: Kita nggak pakai working-directory lagi biar path-nya jelas
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -26,9 +23,12 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
+    # --- MASUK KE FOLDER & SETUP ---
     - name: Generate Gradle Wrapper & Settings
       run: |
+        cd noir-parental/child-app-android
         gradle wrapper --gradle-version 9.8.2
+        
         cat <<EOF > settings.gradle
         pluginManagement {
             repositories {
@@ -50,6 +50,7 @@ jobs:
 
     - name: Bikin build.gradle
       run: |
+        cd noir-parental/child-app-android
         rm -f build.gradle
         mkdir -p app
         cat <<EOF > app/build.gradle
@@ -75,6 +76,7 @@ jobs:
 
     - name: Bikin Manifest & Layout
       run: |
+        cd noir-parental/child-app-android
         mkdir -p app/src/main/res/layout
         cat <<EOF > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
@@ -90,7 +92,6 @@ jobs:
             </application>
         </manifest>
         EOF
-
         cat <<EOF > app/src/main/res/layout/activity_main.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -105,20 +106,33 @@ jobs:
         </LinearLayout>
         EOF
 
+    # --- BUILD ---
     - name: Build Debug APK
-      run: ./gradlew assembleDebug
-
-    # --- INI TRIK NYA: PINDAHIN APK KE ROOT ---
-    - name: Pindahin APK ke Root
       run: |
-        # Cari file apk, lalu copy ke folder utama repo
-        find . -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/AppFinal.apk \;
-        # Cek apakah file nya udah pindah
-        ls -la $GITHUB_WORKSPACE/AppFinal.apk
+        cd noir-parental/child-app-android
+        ./gradlew assembleDebug
 
-    # --- UPLOAD DARI ROOT ---
+    # --- BRUTAL: CEK FOLDER ASLI & PRINT LOKASI ---
+    - name: CEK FOLDER ASLI
+      run: |
+        echo "=== ISI FOLDER BUILD/OUTPUTS ==="
+        ls -R noir-parental/child-app-android/app/build/outputs/ || echo "FOLDER NGGAK ADA!"
+        
+        echo "=== CARI FILE APK DI MANA AJA ==="
+        find . -name "*.apk"
+
+    # --- TARIK PAKSA KE ROOT REPO ---
+    - name: TARIK PAKSA APK
+      run: |
+        # Cari file apk, pindahin ke paling luar repo
+        find noir-parental/child-app-android -name "*.apk" -exec cp {} ./APK_ASLI_BANGET.apk \;
+        
+        # Cek apakah berhasil ditarik
+        ls -la APK_ASLI_BANGET.apk
+
+    # --- UPLOAD ---
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: FINAL-APK-DOWNLOAD-DISINI
-        path: AppFinal.apk
+        name: APK-BANGET
+        path: APK_ASLI_BANGET.apk
