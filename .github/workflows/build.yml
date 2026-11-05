@@ -1,15 +1,15 @@
+
 name: Final Build Android APK
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Biar bisa diklik manual dari tab Actions
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
-    # Semua perintah dijalanin di dalam folder proyek Android kamu
     defaults:
       run:
         working-directory: noir-parental/child-app-android
@@ -75,11 +75,17 @@ jobs:
         </manifest>
         EOF
 
-    # --- 2. PROSES BUILD ---
+    # --- 2. SIHIR: GANTI 'auto:' JADI 'android:' ---
+    - name: Fix XML Prefix (auto to android)
+      run: |
+        # Mencari semua file .xml di folder res dan mengganti auto: menjadi android:
+        find app/src/main/res -name "*.xml" -exec sed -i 's/auto:/android:/g' {} +
+
+    # --- 3. PROSES BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    # --- 3. UPLOAD HASIL ---
+    # --- 4. UPLOAD HASIL ---
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
