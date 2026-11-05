@@ -1,4 +1,4 @@
-name: Build APK Pasti Muncul
+name: Extract & Build Android APK
 
 on:
   push:
@@ -8,107 +8,44 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      # Kalau kamu commit file zip project ke repo (mis. di root repo,
+      # namanya noir-parental-control.zip), step ini akan meng-extract-nya.
+      # Kalau kamu sudah push folder project langsung (bukan zip), step ini
+      # otomatis dilewati.
+      - name: Extract project zip (jika ada)
+        run: |
+          if [ -f "noir-parental-control.zip" ]; then
+            unzip -o noir-parental-control.zip -d .
+          fi
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
-      with:
-        cache-disabled: true
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    # --- BIKIN PROYEK DARI NOL ---
-    - name: Bikin Proyek Baru
-      run: |
-        mkdir -p proyek-baru/app/src/main/java/com/example/myapp
-        cd proyek-baru
-        
-        cat <<EOF > settings.gradle
-        pluginManagement {
-            repositories { google(); mavenCentral(); gradlePluginPortal() }
-        }
-        dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories { google(); mavenCentral() }
-        }
-        rootProject.name = 'MyApp'
-        include ':app'
-        EOF
+      # google-services.json tidak disimpan di repo (sensitif).
+      # Diambil dari GitHub Secret bernama GOOGLE_SERVICES_JSON.
+      - name: Restore google-services.json from secret
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > noir-parental/child-app-android/app/google-services.json
 
-        cat <<EOF > app/build.gradle
-        plugins {
-            id 'com.android.application' version '8.6.1'
-        }
-        android {
-            namespace 'com.example.myapp'
-            compileSdk 34
-            defaultConfig {
-                applicationId "com.example.myapp"
-                minSdk 24
-                targetSdk 34
-                versionCode 1
-                versionName "1.0"
-            }
-        }
-        EOF
+      # Pakai Gradle bawaan GitHub Actions (setup-gradle) -> TIDAK butuh
+      # file gradlew / gradle-wrapper.jar yang biasanya di-generate manual
+      # lewat Android Studio.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-        cat <<EOF > app/src/main/AndroidManifest.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <application android:label="MyApp">
-                <activity android:name=".MainActivity" android:exported="true">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN" />
-                        <category android:name="android.intent.category.LAUNCHER" />
-                    </intent-filter>
-                </activity>
-            </application>
-        </manifest>
-        EOF
+      - name: Build debug APK
+        working-directory: noir-parental/child-app-android
+        run: gradle assembleDebug --no-daemon
 
-        cat <<EOF > app/src/main/java/com/example/myapp/MainActivity.kt
-        package com.example.myapp
-        import android.os.Bundle
-        import android.widget.TextView
-        import androidx.appcompat.app.AppCompatActivity
-
-        class MainActivity : AppCompatActivity() {
-            override fun onCreate(savedInstanceState: Bundle?) {
-                super.onCreate(savedInstanceState)
-                val textView = TextView(this)
-                textView.text = "AKHIRNYA APK INI JADI BANG!"
-                setContentView(textView)
-            }
-        }
-        EOF
-
-        gradle wrapper
-
-    # --- BUILD ---
-    - name: Build APK
-      run: |
-        cd proyek-baru
-        ./gradlew assembleDebug
-
-    # --- PAKSA PINDAH APK KE ROOT REPO ---
-    - name: Pindahin APK ke Root
-      run: |
-        # Copy file apk dari folder proyek-baru ke paling luar
-        cp proyek-baru/app/build/outputs/apk/debug/app-debug.apk ./BANG_INI_APK_KAMU.apk
-        
-        # Print ukuran file buat mastiin beneran ada
-        ls -lh BANG_INI_APK_KAMU.apk
-
-    # --- UPLOAD PAKAI NAMA YANG JELAS ---
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: DOWNLOAD_APK_DISINI
-        path: BANG_INI_APK_KAMU.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: noir-x-boost-debug
+          path: noir-parental/child-app-android/app/build/outputs/apk/debug/app-debug.apk
