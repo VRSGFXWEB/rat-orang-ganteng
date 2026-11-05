@@ -26,12 +26,11 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    # --- 1. BIKIN WRAPPER & SETTINGS (INI YANG KURANG) ---
+    # --- 1. SETUP GRADLE & SETTINGS ---
     - name: Generate Gradle Wrapper & Settings
       run: |
-        gradle wrapper
+        gradle wrapper --gradle-version 9.8.2
         
-        # Bikin settings.gradle yang ngasih tahu gudang plugin Android
         cat <<EOF > settings.gradle
         pluginManagement {
             repositories {
@@ -51,15 +50,16 @@ jobs:
         include ':app'
         EOF
 
+    # --- 2. UBAH VERSI AGP JADI 8.6.1 ---
     - name: Hapus build.gradle lama & bikin yang baru
       run: |
         rm -f build.gradle
         mkdir -p app
         
-        # TAMBAHIN VERSI PLUGIN ANDROID (8.2.2) DI SINI
+        # AGP 8.6.1 kompatibel sama Gradle 9.8.2
         cat <<EOF > app/build.gradle
         plugins {
-            id 'com.android.application' version '8.2.2'
+            id 'com.android.application' version '8.6.1'
         }
 
         android {
@@ -81,6 +81,7 @@ jobs:
         }
         EOF
 
+    # --- 3. MANIFEST & LAYOUT ---
     - name: Tulis ulang AndroidManifest & Layout
       run: |
         mkdir -p app/src/main
@@ -115,6 +116,7 @@ jobs:
         </LinearLayout>
         EOF
 
+    # --- 4. BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
