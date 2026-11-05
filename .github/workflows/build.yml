@@ -9,7 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    # Semua perintah dijalanin di folder ini
     defaults:
       run:
         working-directory: noir-parental/child-app-android
@@ -27,43 +26,50 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    # --- MULAI MERAKIT STRUKTUR PROYEK ---
-    
-    - name: Bikin Gradle Wrapper
-      run: gradle wrapper
+    # --- 1. BIKIN WRAPPER & SETTINGS ---
+    - name: Generate Gradle Wrapper & Settings
+      run: |
+        gradle wrapper
+        echo "rootProject.name = 'ChildApp'" > settings.gradle
+        echo "include ':app'" >> settings.gradle
 
-    - name: Bikin file settings.gradle
-      run: echo "rootProject.name = 'ChildApp'" > settings.gradle
-
-    - name: Bikin folder app & pindahin build.gradle
+    # --- 2. TIMPA BUILD.GRADLE DENGAN YANG BENER ---
+    - name: Bikin build.gradle yang benar
       run: |
         mkdir -p app
-        cp build.gradle app/build.gradle
+        cat <<EOF > app/build.gradle
+        plugins {
+            id 'com.android.application'
+        }
+
+        android {
+            namespace 'com.noir.childapp'
+            compileSdk 34
+
+            defaultConfig {
+                applicationId "com.noir.childapp"
+                minSdk 24
+                targetSdk 34
+                versionCode 1
+                versionName "1.0"
+            }
+        }
+        EOF
 
     - name: Bikin AndroidManifest.xml minimal
       run: |
         mkdir -p app/src/main
         cat <<EOF > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-            package="com.noir.childapp">
-            <application android:label="Child App">
-                <!-- Kalo kamu punya MainActivity, hapus komentar di bawah -->
-                <!-- <activity android:name=".MainActivity" android:exported="true">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN" />
-                        <category android:name="android.intent.category.LAUNCHER" />
-                    </intent-filter>
-                </activity> -->
-            </application>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application android:label="Child App" />
         </manifest>
         EOF
 
-    # --- MULAI BUILD APK ---
+    # --- 3. BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    # --- UPLOAD HASILNYA ---
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
