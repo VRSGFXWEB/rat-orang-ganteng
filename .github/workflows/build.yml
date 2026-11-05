@@ -1,49 +1,37 @@
-name: Build APK
+name: Build Android APK
+
 on:
-  workflow_dispatch:
   push:
     branches: [ main, master ]
-
-permissions:
-  contents: read
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Memungkinkan trigger manual dari tab Actions
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Extract project zip (jika ada)
-        run: |
-          if [ -f "noir-parental-control.zip" ]; then
-            unzip -o noir-parental-control.zip -d .
-          fi
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
 
-      - name: Install Android SDK packages
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
-      - name: Create local.properties
-        run: echo "sdk.dir=$ANDROID_HOME" > noir-parental/child-app-android/local.properties
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
 
-      - name: Restore google-services.json from secret
-        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > noir-parental/child-app-android/app/google-services.json
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.7
-
-      - name: Build debug APK
-        working-directory: noir-parental/child-app-android
-        run: gradle assembleDebug --no-daemon --stacktrace
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: NOIRXBOOST-debug-apk
-          path: noir-parental/child-app-android/app/build/outputs/apk/debug/*.apk
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
