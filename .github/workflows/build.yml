@@ -1,4 +1,4 @@
-name: Build APK Fix Total
+name: Build APK Final
 
 on:
   push:
@@ -32,8 +32,13 @@ jobs:
         echo "rootProject.name = 'ChildApp'" > settings.gradle
         echo "include ':app'" >> settings.gradle
 
-    - name: Bikin build.gradle yang benar
+    # --- BERSIHKAN FILE LAMA YANG BIKIN BENTROK ---
+    - name: Hapus build.gradle lama & bikin yang baru
       run: |
+        # Hapus file build.gradle di luar folder app (kalau ada)
+        rm -f build.gradle
+        
+        # Bikin folder app & build.gradle yang baru
         mkdir -p app
         cat <<EOF > app/build.gradle
         plugins {
@@ -93,21 +98,17 @@ jobs:
         </LinearLayout>
         EOF
 
+    # --- BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    # --- INI DIA YANG BARU: NYARI APK DI MANA AJA ---
-    - name: Cari Lokasi APK
+    # --- CEK APAKAH FILE NYA BENERAN ADA ---
+    - name: List file APK
       run: find . -name "*.apk"
 
-    - name: Upload APK Artifact
+    # --- UPLOAD ---
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: child-app-apk
-        # Pakai bintang dua artinya cari di semua folder
         path: "**/*.apk"
-- name: Upload APK Artifact
-  uses: actions/upload-artifact@v4
-  with:
-    name: child-app-apk
-    path: "**/*.apk"   # <--- TAMBAHIN TANDA BINTANG DUA INI
