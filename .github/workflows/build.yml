@@ -1,4 +1,4 @@
-name: Build APK Paling Fix
+name: Build APK Asli (Cek Error)
 
 on:
   push:
@@ -19,17 +19,19 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # --- MASUK KE FOLDER & SETUP ---
-    - name: Generate Gradle Wrapper & Settings
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    # --- 1. SETUP FOLDER PROYEK ---
+    - name: Setup Gradle Wrapper & Settings
       run: |
         cd noir-parental/child-app-android
         
-        # Hapus wrapper lama kalau ada, biar ga bentrok
-        rm -rf gradle gradlew gradlew.bat
-        
-        # Cukup panggil wrapper tanpa versi (pakai bawaan server)
-        gradle wrapper
-        
+        # Bikin wrapper kalau belum ada
+        if [ ! -f gradlew ]; then gradle wrapper; fi
+        chmod +x gradlew
+
+        # Bikin settings.gradle yang bener
         cat <<EOF > settings.gradle
         pluginManagement {
             repositories {
@@ -49,88 +51,40 @@ jobs:
         include ':app'
         EOF
 
-    - name: Bikin build.gradle
+    # --- 2. FIX PLUGIN KALAU BELUM ADA VERSINYA ---
+    - name: Fix build.gradle
       run: |
         cd noir-parental/child-app-android
-        rm -f build.gradle
-        mkdir -p app
-        cat <<EOF > app/build.gradle
-        plugins {
-            id 'com.android.application' version '8.6.1'
-        }
-        android {
-            namespace 'com.noir.childapp'
-            compileSdk 34
-            defaultConfig {
-                applicationId "com.noir.childapp"
-                minSdk 24
-                targetSdk 34
-                versionCode 1
-                versionName "1.0"
-            }
-        }
-        dependencies {
-            implementation 'com.google.android.material:material:1.11.0'
-            implementation 'androidx.appcompat:appcompat:1.6.1'
-        }
-        EOF
+        
+        # Tambahin versi plugin kalau belum ada
+        if ! grep -q "version '8.6.1'" app/build.gradle; then
+          sed -i "s/id 'com.android.application'/id 'com.android.application' version '8.6.1'/" app/build.gradle
+        fi
 
-    - name: Bikin Manifest & Layout
-      run: |
-        cd noir-parental/child-app-android
-        mkdir -p app/src/main/res/layout
-        cat <<EOF > app/src/main/AndroidManifest.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <uses-permission android:name="android.permission.INTERNET" />
-            <application>
-                <activity android:name=".MainActivity" android:exported="true">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN" />
-                        <category android:name="android.intent.category.LAUNCHER" />
-                    </intent-filter>
-                </activity>
-            </application>
-        </manifest>
-        EOF
-        cat <<EOF > app/src/main/res/layout/activity_main.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="center">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Aplikasi Berhasil Di-build!" />
-        </LinearLayout>
-        EOF
-
-    # --- BUILD ---
+    # --- 3. BUILD (PAKAI --STACKTRACE BIAR ERRORNYA JELAS) ---
     - name: Build Debug APK
       run: |
         cd noir-parental/child-app-android
-        ./gradlew assembleDebug
+        # Pakai --stacktrace biar kalau gagal, errornya kelihatan
+        ./gradlew assembleDebug --stacktrace
 
-    # --- CEK APAKAH BENERAN ADA APK-NYA ---
-    - name: CEK FOLDER ASLI
+    # --- 4. CEK FOLDER OUTPUT ---
+    - name: Cek Folder Output
       run: |
-        echo "=== ISI FOLDER BUILD/OUTPUTS ==="
-        ls -R noir-parental/child-app-android/app/build/outputs/ || echo "FOLDER NGGAK ADA!"
+        echo "=== ISI FOLDER BUILD ==="
+        ls -R noir-parental/child-app-android/app/build/ || echo "FOLDER BUILD NGGAK ADA (Berarti Build Gagal!)"
         
-        echo "=== CARI FILE APK DI MANA AJA ==="
+        echo "=== CARI FILE APK ==="
         find . -name "*.apk"
 
-    # --- TARIK KE ROOT ---
-    - name: TARIK PAKSA APK
+    # --- 5. TARIK & UPLOAD ---
+    - name: Tarik APK ke Root
       run: |
-        find noir-parental/child-app-android -name "*.apk" -exec cp {} ./APK_ASLI_BANGET.apk \;
-        ls -la APK_ASLI_BANGET.apk
+        find . -name "*.apk" -exec cp {} ./HASIL_APK.apk \;
+        ls -la HASIL_APK.apk || echo "NGGAK ADA APK YANG DITARIK"
 
-    # --- UPLOAD ---
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: APK-BANGET
-        path: APK_ASLI_BANGET.apk
+        name: APK-ASLI-KAMU
+        path: HASIL_APK.apk
