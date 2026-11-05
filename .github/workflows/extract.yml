@@ -14,12 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract noir-parental-control (1).zip
-        run: unzip -o noir-parental-control (1).zip -d .
+      - name: Extract zip
+        run: unzip -o "noir-parental-control (1).zip" -d .
 
       - name: Commit hasil extract
         run: |
           git config user.name "github-actions"
-          git config user.email "actions@github.com
-          git commit -m "Extract noir-parental-control (1).zip" || echo "Tidak ada perubahan"
+          git config user.email "actions@github.com"
+          git add noir-parental/
+          git commit -m "Extract zip" || echo "Tidak ada perubahan"
           git push
