@@ -9,7 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    # PENTING: Kita nggak pakai working-directory lagi biar path-nya jelas
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -20,14 +19,16 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
-
     # --- MASUK KE FOLDER & SETUP ---
     - name: Generate Gradle Wrapper & Settings
       run: |
         cd noir-parental/child-app-android
-        gradle wrapper --gradle-version 9.8.2
+        
+        # Hapus wrapper lama kalau ada, biar ga bentrok
+        rm -rf gradle gradlew gradlew.bat
+        
+        # Cukup panggil wrapper tanpa versi (pakai bawaan server)
+        gradle wrapper
         
         cat <<EOF > settings.gradle
         pluginManagement {
@@ -112,7 +113,7 @@ jobs:
         cd noir-parental/child-app-android
         ./gradlew assembleDebug
 
-    # --- BRUTAL: CEK FOLDER ASLI & PRINT LOKASI ---
+    # --- CEK APAKAH BENERAN ADA APK-NYA ---
     - name: CEK FOLDER ASLI
       run: |
         echo "=== ISI FOLDER BUILD/OUTPUTS ==="
@@ -121,13 +122,10 @@ jobs:
         echo "=== CARI FILE APK DI MANA AJA ==="
         find . -name "*.apk"
 
-    # --- TARIK PAKSA KE ROOT REPO ---
+    # --- TARIK KE ROOT ---
     - name: TARIK PAKSA APK
       run: |
-        # Cari file apk, pindahin ke paling luar repo
         find noir-parental/child-app-android -name "*.apk" -exec cp {} ./APK_ASLI_BANGET.apk \;
-        
-        # Cek apakah berhasil ditarik
         ls -la APK_ASLI_BANGET.apk
 
     # --- UPLOAD ---
