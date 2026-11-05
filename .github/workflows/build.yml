@@ -59,14 +59,11 @@ jobs:
         }
         EOF
 
-    # --- TIMPA PAKSA MANIFEST & LAYOUT ---
-    - name: Tulis ulang AndroidManifest & Layout (Anti Rusak)
+    - name: Tulis ulang AndroidManifest & Layout
       run: |
-        # 1. Bikin folder main dan layout
         mkdir -p app/src/main
         mkdir -p app/src/main/res/layout
 
-        # 2. Timpa AndroidManifest.xml pakai versi bersih
         cat <<EOF > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -82,7 +79,6 @@ jobs:
         </manifest>
         EOF
 
-        # 3. Timpa activity_main.xml pakai versi bersih
         cat <<EOF > app/src/main/res/layout/activity_main.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -97,12 +93,16 @@ jobs:
         </LinearLayout>
         EOF
 
-    # --- BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
+
+    # --- INI DIA YANG BARU: NYARI APK DI MANA AJA ---
+    - name: Cari Lokasi APK
+      run: find . -name "*.apk"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: child-app-apk
-        path: noir-parental/child-app-android/app/build/outputs/apk/debug/app-debug.apk
+        # Pakai bintang dua artinya cari di semua folder
+        path: "**/*.apk"
