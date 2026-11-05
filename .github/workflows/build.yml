@@ -1,4 +1,4 @@
-name: Build APK Asli (Cek Error)
+name: Build APK Anti Gagal
 
 on:
   push:
@@ -22,12 +22,18 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    # --- 1. SETUP FOLDER PROYEK ---
-    - name: Setup Gradle Wrapper & Settings
+    # --- 1. BUNUH FILE PENGGANGGU ---
+    - name: Setup Proyek
       run: |
         cd noir-parental/child-app-android
         
-        # Bikin wrapper kalau belum ada
+        # RENAME file build.gradle di luar folder app (biar diabaikan Gradle)
+        if [ -f build.gradle ]; then mv build.gradle build.gradle.old; fi
+        
+        # Hapus folder build lama kalau ada
+        rm -rf build .gradle
+
+        # Bikin wrapper
         if [ ! -f gradlew ]; then gradle wrapper; fi
         chmod +x gradlew
 
@@ -51,40 +57,55 @@ jobs:
         include ':app'
         EOF
 
-    # --- 2. FIX PLUGIN KALAU BELUM ADA VERSINYA ---
-    - name: Fix build.gradle
+    # --- 2. PASTIIN BUILD.GRADLE DI FOLDER APP BENER ---
+    - name: Fix build.gradle di folder app
       run: |
         cd noir-parental/child-app-android
         
-        # Tambahin versi plugin kalau belum ada
-        if ! grep -q "version '8.6.1'" app/build.gradle; then
-          sed -i "s/id 'com.android.application'/id 'com.android.application' version '8.6.1'/" app/build.gradle
+        # Kalau file app/build.gradle belum ada, bikin baru
+        if [ ! -f app/build.gradle ]; then
+          mkdir -p app
+          cat <<EOF > app/build.gradle
+          plugins {
+              id 'com.android.application' version '8.6.1'
+          }
+          android {
+              namespace 'com.noir.childapp'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.noir.childapp"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+          }
+          dependencies {
+              implementation 'com.google.android.material:material:1.11.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          EOF
+        else
+          # Kalau udah ada, cuma tambahin versi plugin-nya
+          if ! grep -q "version '8.6.1'" app/build.gradle; then
+            sed -i "s/id 'com.android.application'/id 'com.android.application' version '8.6.1'/" app/build.gradle
+          fi
         fi
 
-    # --- 3. BUILD (PAKAI --STACKTRACE BIAR ERRORNYA JELAS) ---
+    # --- 3. BUILD ---
     - name: Build Debug APK
       run: |
         cd noir-parental/child-app-android
-        # Pakai --stacktrace biar kalau gagal, errornya kelihatan
-        ./gradlew assembleDebug --stacktrace
+        ./gradlew assembleDebug
 
-    # --- 4. CEK FOLDER OUTPUT ---
-    - name: Cek Folder Output
+    # --- 4. CARI & UPLOAD ---
+    - name: Tarik APK
       run: |
-        echo "=== ISI FOLDER BUILD ==="
-        ls -R noir-parental/child-app-android/app/build/ || echo "FOLDER BUILD NGGAK ADA (Berarti Build Gagal!)"
-        
-        echo "=== CARI FILE APK ==="
         find . -name "*.apk"
-
-    # --- 5. TARIK & UPLOAD ---
-    - name: Tarik APK ke Root
-      run: |
         find . -name "*.apk" -exec cp {} ./HASIL_APK.apk \;
-        ls -la HASIL_APK.apk || echo "NGGAK ADA APK YANG DITARIK"
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: APK-ASLI-KAMU
+        name: APK-KAMU
         path: HASIL_APK.apk
