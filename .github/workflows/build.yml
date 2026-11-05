@@ -106,3 +106,8 @@ jobs:
         name: child-app-apk
         # Pakai bintang dua artinya cari di semua folder
         path: "**/*.apk"
+- name: Upload APK Artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: child-app-apk
+    path: "**/*.apk"   # <--- TAMBAHIN TANDA BINTANG DUA INI
