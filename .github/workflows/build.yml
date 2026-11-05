@@ -1,4 +1,4 @@
-name: Final Build APK Beneran
+name: Build APK Fix Total
 
 on:
   push:
@@ -59,9 +59,30 @@ jobs:
         }
         EOF
 
-    - name: Bikin Layout Bersih
+    # --- TIMPA PAKSA MANIFEST & LAYOUT ---
+    - name: Tulis ulang AndroidManifest & Layout (Anti Rusak)
       run: |
+        # 1. Bikin folder main dan layout
+        mkdir -p app/src/main
         mkdir -p app/src/main/res/layout
+
+        # 2. Timpa AndroidManifest.xml pakai versi bersih
+        cat <<EOF > app/src/main/AndroidManifest.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application>
+                <activity android:name=".MainActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        EOF
+
+        # 3. Timpa activity_main.xml pakai versi bersih
         cat <<EOF > app/src/main/res/layout/activity_main.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -72,22 +93,11 @@ jobs:
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Aplikasi Berhasil Di-build!"
-                android:textSize="20sp" />
+                android:text="Aplikasi Berhasil Di-build!" />
         </LinearLayout>
         EOF
 
-    # --- INI DIA PENYELAMATNYA ---
-    - name: Bersihin File XML yang Error
-      run: |
-        # 1. Cari semua file XML, ganti "res/auto" jadi "res/android"
-        find . -name "*.xml" -exec sed -i 's|res/auto|res/android|g' {} +
-        
-        # 2. Buang atribut theme, icon, label (biar nggak error resource not found)
-        find . -name "AndroidManifest.xml" -exec sed -i '/android:theme/d' {} +
-        find . -name "AndroidManifest.xml" -exec sed -i '/android:icon/d' {} +
-        find . -name "AndroidManifest.xml" -exec sed -i '/android:label/d' {} +
-
+    # --- BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
