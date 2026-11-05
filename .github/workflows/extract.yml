@@ -5,6 +5,9 @@ on:
     paths:
       - 'noir-parental-control.zip'
 
+permissions:
+  contents: write
+
 jobs:
   extract:
     runs-on: ubuntu-latest
