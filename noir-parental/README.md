@@ -67,6 +67,37 @@ Project ini terdiri dari 2 bagian:
 - Saat pertama buka, app akan minta izin lokasi & Device Admin — ini akan terlihat
   jelas oleh anak/pemegang HP sebagai dialog sistem Android biasa.
 
+## Build otomatis via GitHub Actions
+
+Sudah disiapkan `.github/workflows/build-android.yml`. Versi ini TIDAK butuh
+file `gradlew`/`gradle-wrapper.jar` — workflow-nya pakai Gradle versi system
+lewat action `gradle/actions/setup-gradle`, jadi kamu tidak perlu buka Android
+Studio dulu cuma untuk generate wrapper.
+
+Ada 2 cara kamu push project ke repo, pilih salah satu:
+
+**Opsi A — push folder project langsung (disarankan)**
+1. Extract `noir-parental-control.zip`, lalu push seluruh isi folder `noir-parental/`
+   sebagai root repo kamu di GitHub.
+
+**Opsi B — commit file zip-nya saja**
+1. Taruh `noir-parental-control.zip` di root repo GitHub kamu (commit filenya langsung).
+2. Workflow akan otomatis `unzip` file itu sebelum build (lihat step
+   "Extract project zip" di `build-android.yml`).
+
+Setelah repo siap (opsi A atau B):
+1. Di GitHub repo: **Settings > Secrets and variables > Actions > New repository secret**
+   - Nama: `GOOGLE_SERVICES_JSON`
+   - Value: isi lengkap file `google-services.json` dari Firebase Console (paste apa adanya)
+2. Push ke branch `main`, atau jalankan manual lewat tab **Actions > Extract & Build
+   Android APK > Run workflow**.
+3. Setelah selesai, unduh APK dari bagian **Artifacts** di run tersebut.
+
+**Penting:** jangan pernah commit `google-services.json` langsung ke repo kalau
+repo-nya publik — pakai GitHub Secret seperti di atas untuk itu. File zip project
+sendiri aman untuk di-commit karena tidak berisi config Firebase rahasia (config
+di `firebase-config.js` adalah client config publik, bukan Admin SDK key).
+
 ## Catatan jujur
 
 Skeleton ini mencakup struktur inti & fitur utama, tapi untuk app Android yang siap

@@ -1,0 +1,51 @@
+name: Extract & Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Kalau kamu commit file zip project ke repo (mis. di root repo,
+      # namanya noir-parental-control.zip), step ini akan meng-extract-nya.
+      # Kalau kamu sudah push folder project langsung (bukan zip), step ini
+      # otomatis dilewati.
+      - name: Extract project zip (jika ada)
+        run: |
+          if [ -f "noir-parental-control.zip" ]; then
+            unzip -o noir-parental-control.zip -d .
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # google-services.json tidak disimpan di repo (sensitif).
+      # Diambil dari GitHub Secret bernama GOOGLE_SERVICES_JSON.
+      - name: Restore google-services.json from secret
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > noir-parental/child-app-android/app/google-services.json
+
+      # Pakai Gradle bawaan GitHub Actions (setup-gradle) -> TIDAK butuh
+      # file gradlew / gradle-wrapper.jar yang biasanya di-generate manual
+      # lewat Android Studio.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        working-directory: noir-parental/child-app-android
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: noir-x-boost-debug
+          path: noir-parental/child-app-android/app/build/outputs/apk/debug/app-debug.apk
