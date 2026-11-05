@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Auto Build Android APK
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    # Arahkan ke folder proyek Android yang sebenarnya
+    # Semua perintah dijalanin di folder ini
     defaults:
       run:
         working-directory: noir-parental/child-app-android
@@ -24,15 +24,48 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
 
+    # --- MULAI MERAKIT STRUKTUR PROYEK ---
+    
+    - name: Bikin Gradle Wrapper
+      run: gradle wrapper
+
+    - name: Bikin file settings.gradle
+      run: echo "rootProject.name = 'ChildApp'" > settings.gradle
+
+    - name: Bikin folder app & pindahin build.gradle
+      run: |
+        mkdir -p app
+        cp build.gradle app/build.gradle
+
+    - name: Bikin AndroidManifest.xml minimal
+      run: |
+        mkdir -p app/src/main
+        cat <<EOF > app/src/main/AndroidManifest.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="com.noir.childapp">
+            <application android:label="Child App">
+                <!-- Kalo kamu punya MainActivity, hapus komentar di bawah -->
+                <!-- <activity android:name=".MainActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+                </activity> -->
+            </application>
+        </manifest>
+        EOF
+
+    # --- MULAI BUILD APK ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
+    # --- UPLOAD HASILNYA ---
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: child-app-debug-apk
-        # Path ini relatif dari root repo, bukan dari working-directory
         path: noir-parental/child-app-android/app/build/outputs/apk/debug/app-debug.apk
