@@ -1,4 +1,4 @@
-name: Build APK Anti Gagal
+name: Build APK Paling Anti Gagal
 
 on:
   push:
@@ -21,23 +21,17 @@ jobs:
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-disabled: true
 
-    # --- 1. BUNUH FILE PENGGANGGU ---
-    - name: Setup Proyek
+    # --- 1. BIKIN FOLDER PROYEK BARU DARI NOL ---
+    - name: Bikin Proyek Dari Nol
       run: |
-        cd noir-parental/child-app-android
+        mkdir -p proyek-baru/app/src/main/java/com/example/myapp
+        mkdir -p proyek-baru/app/src/main/res/layout
+        cd proyek-baru
         
-        # RENAME file build.gradle di luar folder app (biar diabaikan Gradle)
-        if [ -f build.gradle ]; then mv build.gradle build.gradle.old; fi
-        
-        # Hapus folder build lama kalau ada
-        rm -rf build .gradle
-
-        # Bikin wrapper
-        if [ ! -f gradlew ]; then gradle wrapper; fi
-        chmod +x gradlew
-
-        # Bikin settings.gradle yang bener
+        # Bikin settings.gradle
         cat <<EOF > settings.gradle
         pluginManagement {
             repositories {
@@ -53,52 +47,87 @@ jobs:
                 mavenCentral()
             }
         }
-        rootProject.name = 'ChildApp'
+        rootProject.name = 'MyApp'
         include ':app'
         EOF
 
-    # --- 2. PASTIIN BUILD.GRADLE DI FOLDER APP BENER ---
-    - name: Fix build.gradle di folder app
-      run: |
-        cd noir-parental/child-app-android
-        
-        # Kalau file app/build.gradle belum ada, bikin baru
-        if [ ! -f app/build.gradle ]; then
-          mkdir -p app
-          cat <<EOF > app/build.gradle
-          plugins {
-              id 'com.android.application' version '8.6.1'
-          }
-          android {
-              namespace 'com.noir.childapp'
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.noir.childapp"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-          }
-          dependencies {
-              implementation 'com.google.android.material:material:1.11.0'
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-          }
-          EOF
-        else
-          # Kalau udah ada, cuma tambahin versi plugin-nya
-          if ! grep -q "version '8.6.1'" app/build.gradle; then
-            sed -i "s/id 'com.android.application'/id 'com.android.application' version '8.6.1'/" app/build.gradle
-          fi
-        fi
+        # Bikin build.gradle root
+        echo "// Root build.gradle" > build.gradle
 
-    # --- 3. BUILD ---
-    - name: Build Debug APK
+        # Bikin build.gradle app
+        cat <<EOF > app/build.gradle
+        plugins {
+            id 'com.android.application' version '8.6.1'
+        }
+        android {
+            namespace 'com.example.myapp'
+            compileSdk 34
+            defaultConfig {
+                applicationId "com.example.myapp"
+                minSdk 24
+                targetSdk 34
+                versionCode 1
+                versionName "1.0"
+            }
+        }
+        EOF
+
+        # Bikin AndroidManifest.xml
+        cat <<EOF > app/src/main/AndroidManifest.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application android:label="MyApp">
+                <activity android:name=".MainActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        EOF
+
+        # Bikin MainActivity.kt (Kode Kotlin)
+        cat <<EOF > app/src/main/java/com/example/myapp/MainActivity.kt
+        package com.example.myapp
+        import android.os.Bundle
+        import android.widget.TextView
+        import androidx.appcompat.app.AppCompatActivity
+
+        class MainActivity : AppCompatActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                val textView = TextView(this)
+                textView.text = "HALO BANG! APK INI BERHASIL DIBUAT!"
+                setContentView(textView)
+            }
+        }
+        EOF
+
+        # Bikin Layout XML
+        cat <<EOF > app/src/main/res/layout/activity_main.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HALO BANG!" />
+        </LinearLayout>
+        EOF
+
+        # Bikin Gradle Wrapper
+        gradle wrapper
+
+    # --- 2. BUILD ---
+    - name: Build APK
       run: |
-        cd noir-parental/child-app-android
+        cd proyek-baru
         ./gradlew assembleDebug
 
-    # --- 4. CARI & UPLOAD ---
+    # --- 3. TARIK & UPLOAD ---
     - name: Tarik APK
       run: |
         find . -name "*.apk"
@@ -107,5 +136,5 @@ jobs:
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: APK-KAMU
+        name: APK-JADI
         path: HASIL_APK.apk
