@@ -1,4 +1,3 @@
-
 name: Final Build Android APK
 
 on:
@@ -27,14 +26,13 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    # --- 1. RAKIT STRUKTUR & FILE YANG HILANG ---
     - name: Generate Gradle Wrapper & Settings
       run: |
         gradle wrapper
         echo "rootProject.name = 'ChildApp'" > settings.gradle
         echo "include ':app'" >> settings.gradle
 
-    - name: Bikin build.gradle yang benar (Plus Material)
+    - name: Bikin build.gradle yang benar
       run: |
         mkdir -p app
         cat <<EOF > app/build.gradle
@@ -75,17 +73,19 @@ jobs:
         </manifest>
         EOF
 
-    # --- 2. SIHIR: GANTI 'auto:' JADI 'android:' ---
-    - name: Fix XML Prefix (auto to android)
+    # --- INI DIA YANG BARU: SIHIR PENGHAPUS 'auto:' ---
+    - name: Hapus 'auto:' dan ganti jadi 'android:'
       run: |
-        # Mencari semua file .xml di folder res dan mengganti auto: menjadi android:
-        find app/src/main/res -name "*.xml" -exec sed -i 's/auto:/android:/g' {} +
+        # 1. Cari semua file .xml di seluruh folder proyek dan ganti auto: jadi android:
+        find . -type f -name "*.xml" -exec sed -i 's/auto:/android:/g' {} +
+        
+        # 2. Hapus deklarasi xmlns:auto di dalam file activity_main (biar nggak konflik)
+        find . -type f -name "activity_main.xml" -exec sed -i '/xmlns:auto/d' {} +
 
-    # --- 3. PROSES BUILD ---
+    # --- BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    # --- 4. UPLOAD HASIL ---
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
