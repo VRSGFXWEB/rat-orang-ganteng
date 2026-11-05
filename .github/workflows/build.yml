@@ -1,14 +1,15 @@
-name: Auto Build Android APK
+name: Final Build Android APK
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch: # Biar bisa diklik manual dari tab Actions
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
+    # Semua perintah dijalanin di dalam folder proyek Android kamu
     defaults:
       run:
         working-directory: noir-parental/child-app-android
@@ -26,15 +27,14 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    # --- 1. BIKIN WRAPPER & SETTINGS ---
+    # --- 1. RAKIT STRUKTUR & FILE YANG HILANG ---
     - name: Generate Gradle Wrapper & Settings
       run: |
         gradle wrapper
         echo "rootProject.name = 'ChildApp'" > settings.gradle
         echo "include ':app'" >> settings.gradle
 
-    # --- 2. TIMPA BUILD.GRADLE DENGAN YANG BENER ---
-    - name: Bikin build.gradle yang benar
+    - name: Bikin build.gradle yang benar (Plus Material)
       run: |
         mkdir -p app
         cat <<EOF > app/build.gradle
@@ -53,6 +53,15 @@ jobs:
                 versionCode 1
                 versionName "1.0"
             }
+            
+            buildFeatures {
+                viewBinding true
+            }
+        }
+
+        dependencies {
+            implementation 'com.google.android.material:material:1.11.0'
+            implementation 'androidx.appcompat:appcompat:1.6.1'
         }
         EOF
 
@@ -66,12 +75,13 @@ jobs:
         </manifest>
         EOF
 
-    # --- 3. BUILD ---
+    # --- 2. PROSES BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
+    # --- 3. UPLOAD HASIL ---
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: child-app-debug-apk
+        name: child-app-final-apk
         path: noir-parental/child-app-android/app/build/outputs/apk/debug/app-debug.apk
