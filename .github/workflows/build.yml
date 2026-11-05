@@ -26,23 +26,40 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
+    # --- 1. BIKIN WRAPPER & SETTINGS (INI YANG KURANG) ---
     - name: Generate Gradle Wrapper & Settings
       run: |
         gradle wrapper
-        echo "rootProject.name = 'ChildApp'" > settings.gradle
-        echo "include ':app'" >> settings.gradle
+        
+        # Bikin settings.gradle yang ngasih tahu gudang plugin Android
+        cat <<EOF > settings.gradle
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        rootProject.name = 'ChildApp'
+        include ':app'
+        EOF
 
-    # --- BERSIHKAN FILE LAMA YANG BIKIN BENTROK ---
     - name: Hapus build.gradle lama & bikin yang baru
       run: |
-        # Hapus file build.gradle di luar folder app (kalau ada)
         rm -f build.gradle
-        
-        # Bikin folder app & build.gradle yang baru
         mkdir -p app
+        
+        # TAMBAHIN VERSI PLUGIN ANDROID (8.2.2) DI SINI
         cat <<EOF > app/build.gradle
         plugins {
-            id 'com.android.application'
+            id 'com.android.application' version '8.2.2'
         }
 
         android {
@@ -98,15 +115,12 @@ jobs:
         </LinearLayout>
         EOF
 
-    # --- BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    # --- CEK APAKAH FILE NYA BENERAN ADA ---
     - name: List file APK
       run: find . -name "*.apk"
 
-    # --- UPLOAD ---
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
