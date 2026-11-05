@@ -13,6 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Extract project zip (jika ada)
+        run: |
+          if [ -f "noir-parental-control.zip" ]; then
+            unzip -o noir-parental-control.zip -d .
+          fi
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -22,6 +28,9 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > noir-parental/child-app-android/local.properties
 
       - name: Restore google-services.json from secret
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > noir-parental/child-app-android/app/google-services.json
