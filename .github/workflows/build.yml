@@ -1,4 +1,4 @@
-name: Build APK Final
+name: Build APK Fix Total
 
 on:
   push:
@@ -26,11 +26,9 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    # --- 1. SETUP GRADLE & SETTINGS ---
     - name: Generate Gradle Wrapper & Settings
       run: |
         gradle wrapper --gradle-version 9.8.2
-        
         cat <<EOF > settings.gradle
         pluginManagement {
             repositories {
@@ -50,22 +48,17 @@ jobs:
         include ':app'
         EOF
 
-    # --- 2. UBAH VERSI AGP JADI 8.6.1 ---
-    - name: Hapus build.gradle lama & bikin yang baru
+    - name: Bikin build.gradle
       run: |
         rm -f build.gradle
         mkdir -p app
-        
-        # AGP 8.6.1 kompatibel sama Gradle 9.8.2
         cat <<EOF > app/build.gradle
         plugins {
             id 'com.android.application' version '8.6.1'
         }
-
         android {
             namespace 'com.noir.childapp'
             compileSdk 34
-
             defaultConfig {
                 applicationId "com.noir.childapp"
                 minSdk 24
@@ -74,19 +67,15 @@ jobs:
                 versionName "1.0"
             }
         }
-
         dependencies {
             implementation 'com.google.android.material:material:1.11.0'
             implementation 'androidx.appcompat:appcompat:1.6.1'
         }
         EOF
 
-    # --- 3. MANIFEST & LAYOUT ---
-    - name: Tulis ulang AndroidManifest & Layout
+    - name: Bikin Manifest & Layout
       run: |
-        mkdir -p app/src/main
         mkdir -p app/src/main/res/layout
-
         cat <<EOF > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -116,15 +105,20 @@ jobs:
         </LinearLayout>
         EOF
 
-    # --- 4. BUILD ---
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    - name: List file APK
-      run: find . -name "*.apk"
+    # --- INI TRIK NYA: PINDAHIN APK KE ROOT ---
+    - name: Pindahin APK ke Root
+      run: |
+        # Cari file apk, lalu copy ke folder utama repo
+        find . -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/AppFinal.apk \;
+        # Cek apakah file nya udah pindah
+        ls -la $GITHUB_WORKSPACE/AppFinal.apk
 
+    # --- UPLOAD DARI ROOT ---
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: child-app-apk
-        path: "**/*.apk"
+        name: FINAL-APK-DOWNLOAD-DISINI
+        path: AppFinal.apk
