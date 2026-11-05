@@ -18,8 +18,8 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Terima lisensi Android SDK
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Restore google-services.json from secret
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > noir-parental/child-app-android/app/google-services.json
